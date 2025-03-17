@@ -1,4 +1,5 @@
 import { HttpException, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import axios, { AxiosError, AxiosInstance } from 'axios';
 import { CreateContactDto } from 'src/contact/dto/create-contact.dto';
 import { ContactDto, GetContactsDto } from 'src/contact/dto/get-contacts.dto';
@@ -7,9 +8,10 @@ import { Task } from 'src/task/entities/task.entity';
 @Injectable()
 export class ConstantContactService {
   private client: AxiosInstance;
-  private readonly baseUrl = 'https://api.cc.email/v3';
+  private readonly baseUrl: string;
 
-  constructor() {
+  constructor(private configService: ConfigService) {
+    this.baseUrl = this.configService.get<string>('CONSTANT_CONTACT_API_BASE_URL') || 'https://api.cc.email/v3';
     this.client = axios.create({
       baseURL: this.baseUrl,
     });
