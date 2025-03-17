@@ -9,7 +9,6 @@ export class TaskController {
 
   @Post('/export-contacts')
   create(@Headers('Authorization') token: string) {
-    console.log('token', token);
     return this.constantContactService.exportContacts(token);
   }
 

@@ -94,12 +94,15 @@ export class ConstantContactService {
 
   async exportContacts(token: string): Promise<Task> {
     try {
-      const response = await fetch(`${this.baseUrl}/activities/contact_exports`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`
+      const response = await fetch(
+        `${this.baseUrl}/activities/contact_exports`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         },
-      }); 
+      );
 
       if (response.ok) {
         return response.json();
@@ -114,41 +117,51 @@ export class ConstantContactService {
   async getTasks(token: string): Promise<{
     activities: Task[];
   }> {
-    const response = await this.client.get("/activities", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      const response = await this.client.get('/activities', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    return response.data;
+      return response.data;
+    } catch (error) {
+      throw new HttpException(error.response.data, error.response.status);
+    }
   }
 
   async downloadTaskResults(url: string, token: string): Promise<Blob> {
-    console.log(" to download task results ", url);
-    const response = await this.client.get(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    return response.data;
+    try {
+      const response = await this.client.get(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      throw new HttpException(error.response.data, error.response.status);
+    }
   }
 
   async getTask(id: string, token: string): Promise<Blob> {
-    const response = await this.client.get(`/activities/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    try {
+      const response = await this.client.get(`/activities/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
+      const downloadUrl = response.data._links.results.href.split('v3').pop();
 
-    const downloadUrl = response.data._links.results.href.split("v3").pop();
+      if (!downloadUrl) {
+        throw new HttpException('Download URL not found', 400);
+      }
 
-    if (!downloadUrl) {
-      throw new HttpException("Download URL not found", 400);
+      const blob = await this.downloadTaskResults(downloadUrl, token);
+
+      return blob;
+    } catch (error) {
+      throw new HttpException(error.response.data, error.response.status);
     }
-
-    const blob = await this.downloadTaskResults(downloadUrl, token);
-
-    return blob;
   }
 }
