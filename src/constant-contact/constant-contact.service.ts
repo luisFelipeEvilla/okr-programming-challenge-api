@@ -1,16 +1,17 @@
 import { HttpException, Injectable } from '@nestjs/common';
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 import { CreateContactDto } from 'src/contact/dto/create-contact.dto';
 import { ContactDto, GetContactsDto } from 'src/contact/dto/get-contacts.dto';
+import { Task } from 'src/task/entities/task.entity';
 
 @Injectable()
 export class ConstantContactService {
   private client: AxiosInstance;
+  private readonly baseUrl = 'https://api.cc.email/v3';
 
   constructor() {
     this.client = axios.create({
-      baseURL:
-        process.env.CONSTANT_CONTACT_API_URL || 'https://api.cc.email/v3/',
+      baseURL: this.baseUrl,
     });
   }
 
@@ -89,5 +90,65 @@ export class ConstantContactService {
     } catch (error) {
       throw new HttpException(error.response.data, error.response.status);
     }
+  }
+
+  async exportContacts(token: string): Promise<Task> {
+    try {
+      const response = await fetch(`${this.baseUrl}/activities/contact_exports`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+      }); 
+
+      if (response.ok) {
+        return response.json();
+      } else {
+        throw new HttpException(response.statusText, response.status);
+      }
+    } catch (error) {
+      throw new HttpException(error.response.data, error.response.status);
+    }
+  }
+
+  async getTasks(token: string): Promise<{
+    activities: Task[];
+  }> {
+    const response = await this.client.get("/activities", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response.data;
+  }
+
+  async downloadTaskResults(url: string, token: string): Promise<Blob> {
+    console.log(" to download task results ", url);
+    const response = await this.client.get(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  }
+
+  async getTask(id: string, token: string): Promise<Blob> {
+    const response = await this.client.get(`/activities/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+
+    const downloadUrl = response.data._links.results.href.split("v3").pop();
+
+    if (!downloadUrl) {
+      throw new HttpException("Download URL not found", 400);
+    }
+
+    const blob = await this.downloadTaskResults(downloadUrl, token);
+
+    return blob;
   }
 }
